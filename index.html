@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>solis.system</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: black;
+      overflow: hidden;
+      font-family: monospace;
+      cursor: default;
+    }
+
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: black;
+    }
+
+    .orb {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 560px;
+      height: 560px;
+      background: radial-gradient(
+        circle at var(--x, 50%) var(--y, 50%),
+        rgba(255,255,255,0.08),
+        rgba(255,255,255,0.015) 40%,
+        transparent 80%
+      );
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .orb.visible {
+      opacity: 1;
+    }
+
+    .orb.reveal-links a {
+      opacity: 0.88;
+    }
+
+    .orb a {
+      color: white;
+      text-decoration: none;
+      font-size: 1rem;
+      margin: 6px 0;
+      opacity: 0;
+      transition: opacity 1s ease, transform 0.8s ease;
+      pointer-events: auto;
+    }
+
+    .orb.reveal-links a:hover {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+  </style>
+</head>
+<body>
+  <div class="scene" id="scene">
+    <div class="orb" id="orb">
+      <a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump">S0LI$ Token ↗</a>
+      <a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a>
+      <a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a>
+      <a href="#">Manifest (soon) ↗</a>
+    </div>
+  </div>
+
+  <script>
+    const scene = document.getElementById("scene");
+    const orb = document.getElementById("orb");
+
+    const orbRadius = 280;
+    const aura = 140;
+
+    function handleLight(e) {
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      const x = clientX / window.innerWidth * 100;
+      const y = clientY / window.innerHeight * 100;
+
+      orb.style.setProperty('--x', `${x}%`);
+      orb.style.setProperty('--y', `${y}%`);
+
+      const orbRect = orb.getBoundingClientRect();
+      const centerX = orbRect.left + orbRect.width / 2;
+      const centerY = orbRect.top + orbRect.height / 2;
+      const dx = clientX - centerX;
+      const dy = clientY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= orbRadius + aura) {
+        orb.classList.add("visible");
+      } else {
+        orb.classList.remove("visible");
+      }
+    }
+
+    function handleClick(e) {
+      const orbRect = orb.getBoundingClientRect();
+      const centerX = orbRect.left + orbRect.width / 2;
+      const centerY = orbRect.top + orbRect.height / 2;
+      const dx = e.clientX - centerX;
+      const dy = e.clientY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance <= orbRadius + aura) {
+        orb.classList.add("reveal-links");
+      }
+    }
+
+    scene.addEventListener("mousemove", handleLight);
+    scene.addEventListener("touchmove", handleLight);
+    scene.addEventListener("click", handleClick);
+  </script>
+</body>
+</html>
