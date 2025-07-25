@@ -2,141 +2,147 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>solis.system</title>
+  <title>Solis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
       background: black;
       overflow: hidden;
-      font-family: monospace;
-      cursor: default;
-      touch-action: none;
+      width: 100%;
+      height: 100%;
     }
 
-    .scene {
-      position: relative;
+    canvas {
+      display: block;
       width: 100vw;
       height: 100vh;
-      background: black;
     }
 
-    .orb {
+    .link-container {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: min(75vw, 75vh);
-      height: min(75vw, 75vh);
-      background: radial-gradient(
-        circle at var(--x, 50%) var(--y, 50%),
-        rgba(255,255,255,0.08),
-        rgba(255,255,255,0.015) 40%,
-        transparent 80%
-      );
-      border-radius: 50%;
       transform: translate(-50%, -50%);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-      z-index: 1;
       display: flex;
-      align-items: center;
-      justify-content: center;
       flex-direction: column;
-    }
-
-    .orb.visible {
-      opacity: 1;
-    }
-
-    .orb.reveal-links a {
-      opacity: 0.88;
-    }
-
-    .orb a {
-      color: white;
-      text-decoration: none;
-      font-size: clamp(0.75rem, 1.5vw, 1rem);
-      margin: 6px 0;
+      align-items: center;
+      gap: 10px;
       opacity: 0;
-      transition: opacity 1s ease, transform 0.8s ease;
-      pointer-events: auto;
+      transition: opacity 0.5s ease;
     }
 
-    .orb.reveal-links a:hover {
+    .link {
+      color: white;
+      font-family: sans-serif;
+      font-size: clamp(0.8rem, 2.5vw, 1rem);
+      text-decoration: none;
+      padding: 6px 12px;
+      background-color: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      backdrop-filter: blur(5px);
+    }
+
+    .link:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .link-container.visible {
       opacity: 1;
-      transform: scale(1.06);
     }
   </style>
 </head>
 <body>
-  <div class="scene" id="scene">
-    <div class="orb" id="orb">
-      <a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump">S0LI$ Token ↗</a>
-      <a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a>
-      <a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a>
-      <a href="#">Manifest (soon) ↗</a>
-    </div>
+  <canvas id="solisCanvas"></canvas>
+  <div id="links" class="link-container">
+    <a class="link" href="https://phantom.app" target="_blank">Phantom Wallet</a>
+    <a class="link" href="https://pump.fun" target="_blank">S0LI$ on Pump</a>
   </div>
 
   <script>
-    const scene = document.getElementById("scene");
-    const orb = document.getElementById("orb");
+    const canvas = document.getElementById('solisCanvas');
+    const ctx = canvas.getContext('2d');
 
-    function getOrbRadius() {
-      const rect = orb.getBoundingClientRect();
-      return rect.width / 2;
+    function resizeCanvas() {
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * ratio;
+      canvas.height = window.innerHeight * ratio;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+      ctx.scale(ratio, ratio);
     }
 
-    function handleLight(e) {
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-      const x = clientX / window.innerWidth * 100;
-      const y = clientY / window.innerHeight * 100;
+    const solis = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      r: Math.min(window.innerWidth, window.innerHeight) / 6,
+      found: false
+    };
 
-      orb.style.setProperty('--x', `${x}%`);
-      orb.style.setProperty('--y', `${y}%`);
+    let mouse = { x: -9999, y: -9999 };
+    let links = document.getElementById("links");
 
-      const orbRect = orb.getBoundingClientRect();
-      const centerX = orbRect.left + orbRect.width / 2;
-      const centerY = orbRect.top + orbRect.height / 2;
-      const dx = clientX - centerX;
-      const dy = clientY - centerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const aura = orbRect.width * 0.25;
-      if (distance <= getOrbRadius() + aura) {
-        orb.classList.add("visible");
+      // Mouse light gradient
+      let grad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, solis.r * 2);
+      grad.addColorStop(0, "rgba(255,255,255,0.15)");
+      grad.addColorStop(1, "rgba(255,255,255,0.0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, solis.r * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Solis interaction
+      let dx = mouse.x - solis.x;
+      let dy = mouse.y - solis.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < solis.r * 1.2) {
+        solis.found = true;
+        links.classList.add("visible");
+
+        let solisGlow = ctx.createRadialGradient(solis.x, solis.y, 0, solis.x, solis.y, solis.r);
+        solisGlow.addColorStop(0, "rgba(255,255,255,0.07)");
+        solisGlow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = solisGlow;
+        ctx.beginPath();
+        ctx.arc(solis.x, solis.y, solis.r, 0, Math.PI * 2);
+        ctx.fill();
       } else {
-        orb.classList.remove("visible");
+        solis.found = false;
+        links.classList.remove("visible");
       }
+
+      requestAnimationFrame(draw);
     }
 
-    function handleClick(e) {
-      const orbRect = orb.getBoundingClientRect();
-      const centerX = orbRect.left + orbRect.width / 2;
-      const centerY = orbRect.top + orbRect.height / 2;
-      const dx = e.clientX - centerX;
-      const dy = e.clientY - centerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      const aura = orbRect.width * 0.25;
-      if (distance <= getOrbRadius() + aura) {
-        orb.classList.add("reveal-links");
-      }
+    // Mouse + Touch light control
+    function updatePos(x, y) {
+      mouse.x = x;
+      mouse.y = y;
     }
 
-    function handleTouchEnd() {
-      orb.classList.remove("visible");
-    }
+    window.addEventListener("mousemove", e => updatePos(e.clientX, e.clientY));
+    window.addEventListener("touchstart", e => {
+      const touch = e.touches[0];
+      updatePos(touch.clientX, touch.clientY);
+    });
+    window.addEventListener("touchmove", e => {
+      const touch = e.touches[0];
+      updatePos(touch.clientX, touch.clientY);
+    });
+    window.addEventListener("touchend", () => {
+      updatePos(-9999, -9999);
+    });
 
-    scene.addEventListener("mousemove", handleLight);
-    scene.addEventListener("touchmove", handleLight);
-    scene.addEventListener("click", handleClick);
-    scene.addEventListener("touchend", handleTouchEnd);
+    draw();
   </script>
 </body>
 </html>
