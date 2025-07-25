@@ -27,8 +27,8 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 560px;
-      height: 560px;
+      width: min(75vw, 75vh);
+      height: min(75vw, 75vh);
       background: radial-gradient(
         circle at var(--x, 50%) var(--y, 50%),
         rgba(255,255,255,0.08),
@@ -58,7 +58,7 @@
     .orb a {
       color: white;
       text-decoration: none;
-      font-size: 1rem;
+      font-size: clamp(0.75rem, 1.5vw, 1rem);
       margin: 6px 0;
       opacity: 0;
       transition: opacity 1s ease, transform 0.8s ease;
@@ -85,8 +85,10 @@
     const scene = document.getElementById("scene");
     const orb = document.getElementById("orb");
 
-    const orbRadius = 280;
-    const aura = 140;
+    function getOrbRadius() {
+      const rect = orb.getBoundingClientRect();
+      return rect.width / 2;
+    }
 
     function handleLight(e) {
       const clientX = e.clientX || (e.touches && e.touches[0].clientX);
@@ -105,7 +107,8 @@
       const dy = clientY - centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance <= orbRadius + aura) {
+      const aura = orbRect.width * 0.25;
+      if (distance <= getOrbRadius() + aura) {
         orb.classList.add("visible");
       } else {
         orb.classList.remove("visible");
@@ -120,7 +123,8 @@
       const dy = e.clientY - centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance <= orbRadius + aura) {
+      const aura = orbRect.width * 0.25;
+      if (distance <= getOrbRadius() + aura) {
         orb.classList.add("reveal-links");
       }
     }
