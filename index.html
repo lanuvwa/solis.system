@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>solis.system</title>
   <style>
     html, body {
@@ -13,6 +13,7 @@
       overflow: hidden;
       font-family: monospace;
       cursor: default;
+      touch-action: none;
     }
 
     .scene {
@@ -124,9 +125,14 @@
       }
     }
 
+    function handleTouchEnd() {
+      orb.classList.remove("visible");
+    }
+
     scene.addEventListener("mousemove", handleLight);
     scene.addEventListener("touchmove", handleLight);
     scene.addEventListener("click", handleClick);
+    scene.addEventListener("touchend", handleTouchEnd);
   </script>
 </body>
 </html>
