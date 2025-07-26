@@ -53,18 +53,18 @@
       font-size: clamp(0.75rem, 1.5vw, 1rem);
       margin: 6px 0;
       opacity: 0;
-      filter: blur(5px);
+      filter: blur(4px);
       pointer-events: none;
       transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
     }
 
     .orb.reveal-links a {
-      opacity: 0.7;
+      opacity: 0.6;
       pointer-events: auto;
     }
 
-    .orb.reveal-links a:hover {
-      opacity: 1;
+    .orb.reveal-links a.active {
+      opacity: 1 !important;
       filter: blur(0);
       transform: scale(1.05);
     }
@@ -101,12 +101,12 @@
     const scene = document.getElementById("scene");
     const orb = document.getElementById("orb");
     const notify = document.getElementById("notify");
+    const links = document.querySelectorAll('.orb a');
 
     let trustGained = false;
     let trustTimeout;
     let inOuterAura = false;
     let inInnerAura = false;
-
     const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
 
     function setLight(e) {
@@ -133,13 +133,11 @@
             pingSolis();
             notify.classList.add("show");
             setTimeout(() => notify.classList.remove("show"), 2500);
-          }, 4000); // longer trust
+          }, 2400); // Longer trust build
         }
       } else if (dist > outerLimit && inOuterAura) {
         orb.classList.remove("visible");
-        orb.classList.remove("reveal-links");
         inOuterAura = false;
-        inInnerAura = false;
         clearTimeout(trustTimeout);
         trustTimeout = null;
       }
@@ -147,10 +145,14 @@
       if (trustGained) {
         if (dist <= innerLimit && !inInnerAura) {
           orb.classList.add("reveal-links");
+          links.forEach(link => link.classList.add('active'));
           inInnerAura = true;
         } else if (dist > innerLimit && inInnerAura) {
           orb.classList.remove("reveal-links");
           inInnerAura = false;
+          links.forEach(link => {
+            setTimeout(() => link.classList.remove('active'), 500); // Heavy delayed exit
+          });
         }
       }
     }
@@ -167,14 +169,13 @@
       if (navigator.vibrate) navigator.vibrate(15);
     }
 
-    document.querySelectorAll('.orb a').forEach(link => {
+    links.forEach(link => {
       link.addEventListener('touchstart', hapticPulse);
       link.addEventListener('mouseenter', hapticPulse);
     });
 
     scene.addEventListener("mousemove", setLight);
     scene.addEventListener("touchmove", setLight);
-    scene.addEventListener("touchstart", setLight);
   </script>
 </body>
 </html>
