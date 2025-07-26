@@ -107,8 +107,21 @@
     let trustTimeout;
     let inOuterAura = false;
     let inInnerAura = false;
+    let hoveredLink = null;
 
     const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
+
+    function hapticPulse() {
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
+
+    function pingSolis() {
+      orb.style.transition = 'transform 0.4s ease';
+      orb.style.transform = 'translate(-50%, -50%) scale(1.08)';
+      setTimeout(() => {
+        orb.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 300);
+    }
 
     function setLight(e) {
       const x = e.clientX || (e.touches && e.touches[0].clientX);
@@ -141,9 +154,10 @@
         orb.classList.remove("reveal-links");
         inOuterAura = false;
         inInnerAura = false;
+        hoveredLink = null;
+        links.forEach(link => link.classList.remove("revealed"));
         clearTimeout(trustTimeout);
         trustTimeout = null;
-        links.forEach(link => link.classList.remove("revealed"));
       }
 
       if (trustGained) {
@@ -153,48 +167,43 @@
         } else if (dist > innerLimit && inInnerAura) {
           orb.classList.remove("reveal-links");
           inInnerAura = false;
+          hoveredLink = null;
           links.forEach(link => link.classList.remove("revealed"));
+        }
+
+        // Check if we're brushing over any link
+        if (inInnerAura) {
+          let foundHover = false;
+          links.forEach(link => {
+            const box = link.getBoundingClientRect();
+            if (x > box.left && x < box.right && y > box.top && y < box.bottom) {
+              if (hoveredLink !== link) {
+                hoveredLink = link;
+                link.classList.add("revealed");
+                hapticPulse();
+              }
+              foundHover = true;
+            } else {
+              link.classList.remove("revealed");
+              if (hoveredLink === link) hoveredLink = null;
+            }
+          });
         }
       }
     }
 
-    function pingSolis() {
-      orb.style.transition = 'transform 0.4s ease';
-      orb.style.transform = 'translate(-50%, -50%) scale(1.08)';
-      setTimeout(() => {
-        orb.style.transform = 'translate(-50%, -50%) scale(1)';
-      }, 300);
-    }
-
-    function hapticPulse() {
-      if (navigator.vibrate) navigator.vibrate(15);
-    }
-
-    // Link interaction handlers
+    // Hover for desktop
     links.forEach(link => {
-      // Touch interaction
-      link.addEventListener('touchstart', e => {
-        link.classList.add('revealed');
-        hapticPulse();
-      });
-
-      link.addEventListener('touchend', e => {
-        setTimeout(() => {
-          link.classList.remove('revealed');
-        }, 1200); // stays longer after touch
-      });
-
-      // Desktop hover
       link.addEventListener('mouseenter', () => {
         hapticPulse();
         link.classList.add('revealed');
       });
-
       link.addEventListener('mouseleave', () => {
         link.classList.remove('revealed');
       });
     });
 
+    // Listen to pointer motion
     scene.addEventListener("mousemove", setLight);
     scene.addEventListener("touchmove", setLight);
     scene.addEventListener("touchstart", setLight);
