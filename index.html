@@ -53,18 +53,18 @@
       font-size: clamp(0.75rem, 1.5vw, 1rem);
       margin: 6px 0;
       opacity: 0;
-      filter: blur(4px);
+      filter: blur(5px);
       pointer-events: none;
       transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
     }
 
     .orb.reveal-links a {
-      opacity: 0.6;
+      opacity: 0.7;
       pointer-events: auto;
     }
 
-    .orb.reveal-links a.active {
-      opacity: 1 !important;
+    .orb.reveal-links a.revealed {
+      opacity: 1;
       filter: blur(0);
       transform: scale(1.05);
     }
@@ -101,12 +101,13 @@
     const scene = document.getElementById("scene");
     const orb = document.getElementById("orb");
     const notify = document.getElementById("notify");
-    const links = document.querySelectorAll('.orb a');
+    const links = document.querySelectorAll(".orb a");
 
     let trustGained = false;
     let trustTimeout;
     let inOuterAura = false;
     let inInnerAura = false;
+
     const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
 
     function setLight(e) {
@@ -133,26 +134,26 @@
             pingSolis();
             notify.classList.add("show");
             setTimeout(() => notify.classList.remove("show"), 2500);
-          }, 2400); // Longer trust build
+          }, 4000);
         }
       } else if (dist > outerLimit && inOuterAura) {
         orb.classList.remove("visible");
+        orb.classList.remove("reveal-links");
         inOuterAura = false;
+        inInnerAura = false;
         clearTimeout(trustTimeout);
         trustTimeout = null;
+        links.forEach(link => link.classList.remove("revealed"));
       }
 
       if (trustGained) {
         if (dist <= innerLimit && !inInnerAura) {
           orb.classList.add("reveal-links");
-          links.forEach(link => link.classList.add('active'));
           inInnerAura = true;
         } else if (dist > innerLimit && inInnerAura) {
           orb.classList.remove("reveal-links");
           inInnerAura = false;
-          links.forEach(link => {
-            setTimeout(() => link.classList.remove('active'), 500); // Heavy delayed exit
-          });
+          links.forEach(link => link.classList.remove("revealed"));
         }
       }
     }
@@ -169,13 +170,34 @@
       if (navigator.vibrate) navigator.vibrate(15);
     }
 
+    // Link interaction handlers
     links.forEach(link => {
-      link.addEventListener('touchstart', hapticPulse);
-      link.addEventListener('mouseenter', hapticPulse);
+      // Touch interaction
+      link.addEventListener('touchstart', e => {
+        link.classList.add('revealed');
+        hapticPulse();
+      });
+
+      link.addEventListener('touchend', e => {
+        setTimeout(() => {
+          link.classList.remove('revealed');
+        }, 1200); // stays longer after touch
+      });
+
+      // Desktop hover
+      link.addEventListener('mouseenter', () => {
+        hapticPulse();
+        link.classList.add('revealed');
+      });
+
+      link.addEventListener('mouseleave', () => {
+        link.classList.remove('revealed');
+      });
     });
 
     scene.addEventListener("mousemove", setLight);
     scene.addEventListener("touchmove", setLight);
+    scene.addEventListener("touchstart", setLight);
   </script>
 </body>
 </html>
