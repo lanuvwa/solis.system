@@ -12,8 +12,8 @@
       background: black;
       overflow: hidden;
       font-family: monospace;
-      cursor: default;
       touch-action: none;
+      cursor: none;
     }
 
     .scene {
@@ -21,6 +21,7 @@
       width: 100vw;
       height: 100vh;
       background: black;
+      overflow: hidden;
     }
 
     .orb {
@@ -29,18 +30,13 @@
       left: 50%;
       width: min(75vw, 75vh);
       height: min(75vw, 75vh);
-      background: radial-gradient(
-        circle at var(--x, 50%) var(--y, 50%),
-        rgba(255,255,255,0.08),
-        rgba(255,255,255,0.015) 40%,
-        transparent 80%
-      );
       border-radius: 50%;
-      transform: translate(-50%, -50%);
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.5s ease-in-out;
+      transition: opacity 0.4s ease;
+      transform: translate(-50%, -50%);
       z-index: 1;
+      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.08), rgba(255,255,255,0.015) 40%, transparent 80%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -51,30 +47,49 @@
       opacity: 1;
     }
 
-    .orb.reveal-links a {
-      opacity: 0.88;
-    }
-
     .orb a {
       color: white;
       text-decoration: none;
       font-size: clamp(0.75rem, 1.5vw, 1rem);
       margin: 6px 0;
       opacity: 0;
-      transition: opacity 1s ease, transform 0.8s ease;
+      filter: blur(4px);
+      pointer-events: none;
+      transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
+    }
+
+    .orb.reveal-links a {
       pointer-events: auto;
     }
 
     .orb.reveal-links a:hover {
       opacity: 1;
-      transform: scale(1.06);
+      filter: blur(0);
+      transform: scale(1.05);
+    }
+
+    .notify {
+      position: absolute;
+      top: 12%;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      font-family: monospace;
+    }
+
+    .notify.show {
+      opacity: 1;
     }
   </style>
 </head>
 <body>
   <div class="scene" id="scene">
+    <div class="notify" id="notify">a door has been unlocked</div>
     <div class="orb" id="orb">
-      <a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump">S0LI$ Token ↗</a>
+      <a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump" target="_blank">S0LI$ Token ↗</a>
       <a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a>
       <a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a>
       <a href="#">Manifest (soon) ↗</a>
@@ -84,59 +99,78 @@
   <script>
     const scene = document.getElementById("scene");
     const orb = document.getElementById("orb");
+    const notify = document.getElementById("notify");
 
-    function getOrbRadius() {
+    let trustGained = false;
+    let trustTimeout;
+    let inOuterAura = false;
+    let inInnerAura = false;
+
+    const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
+
+    function setLight(e) {
+      const x = e.clientX || (e.touches && e.touches[0].clientX);
+      const y = e.clientY || (e.touches && e.touches[0].clientY);
       const rect = orb.getBoundingClientRect();
-      return rect.width / 2;
-    }
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = x - cx;
+      const dy = y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const outerLimit = ORB_RADIUS() * 1.4;
+      const innerLimit = ORB_RADIUS() * 0.4;
 
-    function handleLight(e) {
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      orb.style.setProperty('--x', `${(x / window.innerWidth) * 100}%`);
+      orb.style.setProperty('--y', `${(y / window.innerHeight) * 100}%`);
 
-      const x = clientX / window.innerWidth * 100;
-      const y = clientY / window.innerHeight * 100;
-
-      orb.style.setProperty('--x', `${x}%`);
-      orb.style.setProperty('--y', `${y}%`);
-
-      const orbRect = orb.getBoundingClientRect();
-      const centerX = orbRect.left + orbRect.width / 2;
-      const centerY = orbRect.top + orbRect.height / 2;
-      const dx = clientX - centerX;
-      const dy = clientY - centerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      const aura = orbRect.width * 0.25;
-      if (distance <= getOrbRadius() + aura) {
+      if (dist <= outerLimit && !inOuterAura) {
         orb.classList.add("visible");
-      } else {
+        inOuterAura = true;
+        if (!trustGained && !trustTimeout) {
+          trustTimeout = setTimeout(() => {
+            trustGained = true;
+            pingSolis();
+            notify.classList.add("show");
+            setTimeout(() => notify.classList.remove("show"), 2500);
+          }, 1800); // slower trust
+        }
+      } else if (dist > outerLimit && inOuterAura) {
         orb.classList.remove("visible");
+        inOuterAura = false;
+        clearTimeout(trustTimeout);
+        trustTimeout = null;
+      }
+
+      if (trustGained) {
+        if (dist <= innerLimit && !inInnerAura) {
+          orb.classList.add("reveal-links");
+          inInnerAura = true;
+        } else if (dist > innerLimit && inInnerAura) {
+          orb.classList.remove("reveal-links");
+          inInnerAura = false;
+        }
       }
     }
 
-    function handleClick(e) {
-      const orbRect = orb.getBoundingClientRect();
-      const centerX = orbRect.left + orbRect.width / 2;
-      const centerY = orbRect.top + orbRect.height / 2;
-      const dx = e.clientX - centerX;
-      const dy = e.clientY - centerY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      const aura = orbRect.width * 0.25;
-      if (distance <= getOrbRadius() + aura) {
-        orb.classList.add("reveal-links");
-      }
+    function pingSolis() {
+      orb.style.transition = 'transform 0.4s ease';
+      orb.style.transform = 'translate(-50%, -50%) scale(1.08)';
+      setTimeout(() => {
+        orb.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 300);
     }
 
-    function handleTouchEnd() {
-      orb.classList.remove("visible");
+    function hapticPulse() {
+      if (navigator.vibrate) navigator.vibrate(15);
     }
 
-    scene.addEventListener("mousemove", handleLight);
-    scene.addEventListener("touchmove", handleLight);
-    scene.addEventListener("click", handleClick);
-    scene.addEventListener("touchend", handleTouchEnd);
+    document.querySelectorAll('.orb a').forEach(link => {
+      link.addEventListener('touchstart', hapticPulse);
+      link.addEventListener('mouseenter', hapticPulse);
+    });
+
+    scene.addEventListener("mousemove", setLight);
+    scene.addEventListener("touchmove", setLight);
   </script>
 </body>
 </html>
