@@ -53,12 +53,13 @@
       font-size: clamp(0.75rem, 1.5vw, 1rem);
       margin: 6px 0;
       opacity: 0;
-      filter: blur(4px);
+      filter: blur(5px);
       pointer-events: none;
       transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
     }
 
     .orb.reveal-links a {
+      opacity: 0.7;
       pointer-events: auto;
     }
 
@@ -132,11 +133,13 @@
             pingSolis();
             notify.classList.add("show");
             setTimeout(() => notify.classList.remove("show"), 2500);
-          }, 1800); // slower trust
+          }, 4000); // longer trust
         }
       } else if (dist > outerLimit && inOuterAura) {
         orb.classList.remove("visible");
+        orb.classList.remove("reveal-links");
         inOuterAura = false;
+        inInnerAura = false;
         clearTimeout(trustTimeout);
         trustTimeout = null;
       }
@@ -171,6 +174,7 @@
 
     scene.addEventListener("mousemove", setLight);
     scene.addEventListener("touchmove", setLight);
+    scene.addEventListener("touchstart", setLight);
   </script>
 </body>
 </html>
