@@ -77,6 +77,13 @@
       z-index: 2;
     }
 
+    .orb.soloing a:not(.active),
+    .orb.soloing::before,
+    .orb.soloing::after {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
     .notify {
       position: absolute;
       top: 12%;
@@ -116,7 +123,8 @@
     let inOuterAura = false;
     let inInnerAura = false;
     let activeLink = null;
-    let timeoutId;
+    let soloTimeout;
+    let tapTracker = new WeakMap();
 
     const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
 
@@ -135,7 +143,7 @@
       orb.style.setProperty('--x', `${(x / window.innerWidth) * 100}%`);
       orb.style.setProperty('--y', `${(y / window.innerHeight) * 100}%`);
 
-      if (activeLink) return; // override orb if link active
+      if (activeLink) return;
 
       if (dist <= outerLimit && !inOuterAura) {
         orb.classList.add("visible");
@@ -180,34 +188,47 @@
       if (navigator.vibrate) navigator.vibrate(15);
     }
 
+    function spotlightLink(link) {
+      orb.classList.add("soloing");
+      links.forEach(l => l.classList.remove("active"));
+      clearTimeout(soloTimeout);
+
+      link.classList.add("active");
+      activeLink = link;
+
+      soloTimeout = setTimeout(() => {
+        orb.classList.remove("soloing");
+        link.classList.remove("active");
+        activeLink = null;
+        orb.classList.add("reveal-links");
+      }, 3000);
+    }
+
     links.forEach(link => {
-      link.addEventListener('touchstart', hapticPulse);
-      link.addEventListener('mouseenter', hapticPulse);
+      link.addEventListener('mouseenter', () => {
+        if (!trustGained || activeLink) return;
+        hapticPulse();
+        spotlightLink(link);
+      });
 
       link.addEventListener('click', (e) => {
-        if (link === activeLink) {
-          return; // already clicked, let it open
+        if (!trustGained) return;
+
+        const now = Date.now();
+        const lastTap = tapTracker.get(link) || 0;
+
+        if (now - lastTap < 700) {
+          // Confirmed second tap
+          return;
         }
 
         e.preventDefault();
         e.stopPropagation();
-
-        // deactivate previous
-        links.forEach(l => l.classList.remove("active"));
-        clearTimeout(timeoutId);
-
-        // activate this one
-        activeLink = link;
-        link.classList.add("active");
-        orb.classList.remove("reveal-links");
-
-        // fade out after 3s
-        timeoutId = setTimeout(() => {
-          link.classList.remove("active");
-          activeLink = null;
-          orb.classList.add("reveal-links");
-        }, 3000);
+        tapTracker.set(link, now);
+        spotlightLink(link);
       });
+
+      link.addEventListener('touchstart', hapticPulse);
     });
 
     scene.addEventListener("mousemove", setLight);
