@@ -56,6 +56,7 @@
       filter: blur(5px);
       pointer-events: none;
       transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
+      transform: scale(1);
     }
 
     .orb.reveal-links a {
@@ -63,10 +64,17 @@
       pointer-events: auto;
     }
 
-    .orb.reveal-links a.revealed {
+    .orb.reveal-links a:hover {
       opacity: 1;
       filter: blur(0);
       transform: scale(1.05);
+    }
+
+    .orb a.active {
+      opacity: 1 !important;
+      filter: blur(0) !important;
+      transform: scale(1.1);
+      z-index: 2;
     }
 
     .notify {
@@ -107,21 +115,10 @@
     let trustTimeout;
     let inOuterAura = false;
     let inInnerAura = false;
-    let hoveredLink = null;
+    let activeLink = null;
+    let timeoutId;
 
     const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
-
-    function hapticPulse() {
-      if (navigator.vibrate) navigator.vibrate(15);
-    }
-
-    function pingSolis() {
-      orb.style.transition = 'transform 0.4s ease';
-      orb.style.transform = 'translate(-50%, -50%) scale(1.08)';
-      setTimeout(() => {
-        orb.style.transform = 'translate(-50%, -50%) scale(1)';
-      }, 300);
-    }
 
     function setLight(e) {
       const x = e.clientX || (e.touches && e.touches[0].clientX);
@@ -137,6 +134,8 @@
 
       orb.style.setProperty('--x', `${(x / window.innerWidth) * 100}%`);
       orb.style.setProperty('--y', `${(y / window.innerHeight) * 100}%`);
+
+      if (activeLink) return; // override orb if link active
 
       if (dist <= outerLimit && !inOuterAura) {
         orb.classList.add("visible");
@@ -154,8 +153,6 @@
         orb.classList.remove("reveal-links");
         inOuterAura = false;
         inInnerAura = false;
-        hoveredLink = null;
-        links.forEach(link => link.classList.remove("revealed"));
         clearTimeout(trustTimeout);
         trustTimeout = null;
       }
@@ -167,43 +164,52 @@
         } else if (dist > innerLimit && inInnerAura) {
           orb.classList.remove("reveal-links");
           inInnerAura = false;
-          hoveredLink = null;
-          links.forEach(link => link.classList.remove("revealed"));
-        }
-
-        // Check if we're brushing over any link
-        if (inInnerAura) {
-          let foundHover = false;
-          links.forEach(link => {
-            const box = link.getBoundingClientRect();
-            if (x > box.left && x < box.right && y > box.top && y < box.bottom) {
-              if (hoveredLink !== link) {
-                hoveredLink = link;
-                link.classList.add("revealed");
-                hapticPulse();
-              }
-              foundHover = true;
-            } else {
-              link.classList.remove("revealed");
-              if (hoveredLink === link) hoveredLink = null;
-            }
-          });
         }
       }
     }
 
-    // Hover for desktop
+    function pingSolis() {
+      orb.style.transition = 'transform 0.4s ease';
+      orb.style.transform = 'translate(-50%, -50%) scale(1.08)';
+      setTimeout(() => {
+        orb.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 300);
+    }
+
+    function hapticPulse() {
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
+
     links.forEach(link => {
-      link.addEventListener('mouseenter', () => {
-        hapticPulse();
-        link.classList.add('revealed');
-      });
-      link.addEventListener('mouseleave', () => {
-        link.classList.remove('revealed');
+      link.addEventListener('touchstart', hapticPulse);
+      link.addEventListener('mouseenter', hapticPulse);
+
+      link.addEventListener('click', (e) => {
+        if (link === activeLink) {
+          return; // already clicked, let it open
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // deactivate previous
+        links.forEach(l => l.classList.remove("active"));
+        clearTimeout(timeoutId);
+
+        // activate this one
+        activeLink = link;
+        link.classList.add("active");
+        orb.classList.remove("reveal-links");
+
+        // fade out after 3s
+        timeoutId = setTimeout(() => {
+          link.classList.remove("active");
+          activeLink = null;
+          orb.classList.add("reveal-links");
+        }, 3000);
       });
     });
 
-    // Listen to pointer motion
     scene.addEventListener("mousemove", setLight);
     scene.addEventListener("touchmove", setLight);
     scene.addEventListener("touchstart", setLight);
