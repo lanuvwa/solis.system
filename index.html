@@ -8,205 +8,137 @@
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
       background: black;
       overflow: hidden;
-      font-family: monospace;
       touch-action: none;
-      cursor: none;
+      height: 100%;
+      font-family: sans-serif;
     }
 
-    .scene {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      background: black;
-      overflow: hidden;
-    }
-
-    .orb {
+    #canvas {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      width: min(75vw, 75vh);
-      height: min(75vw, 75vh);
-      border-radius: 50%;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      transform: translate(-50%, -50%);
-      z-index: 1;
-      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.08), rgba(255,255,255,0.015) 40%, transparent 80%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
     }
 
-    .orb.visible {
-      opacity: 1;
-    }
-
-    .orb a {
+    .portal {
+      position: absolute;
       color: white;
-      text-decoration: none;
-      font-size: clamp(0.75rem, 1.5vw, 1rem);
-      margin: 6px 0;
+      font-size: 1.25rem;
       opacity: 0;
-      filter: blur(5px);
+      filter: blur(8px);
+      transition: opacity 1s ease, filter 1s ease, transform 0.5s ease;
       pointer-events: none;
-      transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
     }
 
-    .orb.reveal-links a {
-      opacity: 0.7;
+    .portal.active {
+      opacity: 1;
+      filter: blur(0px);
       pointer-events: auto;
     }
 
-    .orb.reveal-links a.revealed {
-      opacity: 1;
-      filter: blur(0);
+    .portal:hover {
       transform: scale(1.05);
     }
 
-    .notify {
+    .ping {
       position: absolute;
-      top: 12%;
-      width: 100%;
-      text-align: center;
-      color: white;
-      font-size: 0.9rem;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: radial-gradient(white, transparent);
       opacity: 0;
-      transition: opacity 0.8s ease;
-      font-family: monospace;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      transition: opacity 1s ease-out;
     }
 
-    .notify.show {
-      opacity: 1;
+    .ping.show {
+      opacity: 0.3;
     }
   </style>
 </head>
 <body>
-  <div class="scene" id="scene">
-    <div class="notify" id="notify">a door has been unlocked</div>
-    <div class="orb" id="orb">
-      <a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump" target="_blank">S0LI$ Token ↗</a>
-      <a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a>
-      <a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a>
-      <a href="#">Manifest (soon) ↗</a>
-    </div>
-  </div>
-
+  <canvas id="canvas"></canvas>
+  <div id="portal-container"></div>
+  <div id="ping" class="ping"></div>
   <script>
-    const scene = document.getElementById("scene");
-    const orb = document.getElementById("orb");
-    const notify = document.getElementById("notify");
-    const links = document.querySelectorAll(".orb a");
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const ping = document.getElementById('ping');
+    const portalContainer = document.getElementById('portal-container');
+    const portals = ["mirror", "tree", "coin", "presence"];
+    const portalElements = {};
 
-    let trustGained = false;
-    let trustTimeout;
-    let inOuterAura = false;
-    let inInnerAura = false;
-    let hoveredLink = null;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
+    let orb = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      radius: 80,
+      aura: 180,
+      visible: false,
+      trust: false
+    };
 
-    function hapticPulse() {
-      if (navigator.vibrate) navigator.vibrate(15);
-    }
-
-    function pingSolis() {
-      orb.style.transition = 'transform 0.4s ease';
-      orb.style.transform = 'translate(-50%, -50%) scale(1.08)';
-      setTimeout(() => {
-        orb.style.transform = 'translate(-50%, -50%) scale(1)';
-      }, 300);
-    }
-
-    function setLight(e) {
-      const x = e.clientX || (e.touches && e.touches[0].clientX);
-      const y = e.clientY || (e.touches && e.touches[0].clientY);
-      const rect = orb.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = x - cx;
-      const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const outerLimit = ORB_RADIUS() * 1.4;
-      const innerLimit = ORB_RADIUS() * 0.4;
-
-      orb.style.setProperty('--x', `${(x / window.innerWidth) * 100}%`);
-      orb.style.setProperty('--y', `${(y / window.innerHeight) * 100}%`);
-
-      if (dist <= outerLimit && !inOuterAura) {
-        orb.classList.add("visible");
-        inOuterAura = true;
-        if (!trustGained && !trustTimeout) {
-          trustTimeout = setTimeout(() => {
-            trustGained = true;
-            pingSolis();
-            notify.classList.add("show");
-            setTimeout(() => notify.classList.remove("show"), 2500);
-          }, 4000);
-        }
-      } else if (dist > outerLimit && inOuterAura) {
-        orb.classList.remove("visible");
-        orb.classList.remove("reveal-links");
-        inOuterAura = false;
-        inInnerAura = false;
-        hoveredLink = null;
-        links.forEach(link => link.classList.remove("revealed"));
-        clearTimeout(trustTimeout);
-        trustTimeout = null;
-      }
-
-      if (trustGained) {
-        if (dist <= innerLimit && !inInnerAura) {
-          orb.classList.add("reveal-links");
-          inInnerAura = true;
-        } else if (dist > innerLimit && inInnerAura) {
-          orb.classList.remove("reveal-links");
-          inInnerAura = false;
-          hoveredLink = null;
-          links.forEach(link => link.classList.remove("revealed"));
-        }
-
-        // Check if we're brushing over any link
-        if (inInnerAura) {
-          let foundHover = false;
-          links.forEach(link => {
-            const box = link.getBoundingClientRect();
-            if (x > box.left && x < box.right && y > box.top && y < box.bottom) {
-              if (hoveredLink !== link) {
-                hoveredLink = link;
-                link.classList.add("revealed");
-                hapticPulse();
-              }
-              foundHover = true;
-            } else {
-              link.classList.remove("revealed");
-              if (hoveredLink === link) hoveredLink = null;
-            }
-          });
-        }
-      }
-    }
-
-    // Hover for desktop
-    links.forEach(link => {
-      link.addEventListener('mouseenter', () => {
-        hapticPulse();
-        link.classList.add('revealed');
-      });
-      link.addEventListener('mouseleave', () => {
-        link.classList.remove('revealed');
-      });
+    portals.forEach((name, i) => {
+      const el = document.createElement('div');
+      el.textContent = name;
+      el.classList.add('portal');
+      el.style.left = `${orb.x - 40 + i * 90}px`;
+      el.style.top = `${orb.y + 100}px`;
+      portalContainer.appendChild(el);
+      portalElements[name] = el;
     });
 
-    // Listen to pointer motion
-    scene.addEventListener("mousemove", setLight);
-    scene.addEventListener("touchmove", setLight);
-    scene.addEventListener("touchstart", setLight);
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (orb.visible) {
+        let grd = ctx.createRadialGradient(orb.x, orb.y, 10, orb.x, orb.y, orb.radius);
+        grd.addColorStop(0, 'white');
+        grd.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      requestAnimationFrame(draw);
+    }
+
+    function showPing(x, y) {
+      ping.style.left = `${x}px`;
+      ping.style.top = `${y}px`;
+      ping.classList.add('show');
+      setTimeout(() => ping.classList.remove('show'), 1200);
+    }
+
+    function checkTrust(x, y) {
+      const dist = Math.hypot(x - orb.x, y - orb.y);
+      if (dist < orb.aura && !orb.trust) {
+        orb.trust = true;
+        showPing(orb.x, orb.y);
+        Object.values(portalElements).forEach(el => el.classList.add('active'));
+      }
+    }
+
+    canvas.addEventListener('pointermove', e => {
+      const x = e.clientX;
+      const y = e.clientY;
+      const dist = Math.hypot(x - orb.x, y - orb.y);
+      orb.visible = dist < orb.aura;
+      checkTrust(x, y);
+    });
+
+    canvas.addEventListener('pointerdown', e => {
+      const x = e.clientX;
+      const y = e.clientY;
+      checkTrust(x, y);
+    });
+
+    draw();
   </script>
 </body>
 </html>
