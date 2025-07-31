@@ -65,7 +65,6 @@
     }
 
     .orb.reveal-links a:hover {
-    .orb.reveal-links a.revealed {
       opacity: 1;
       filter: blur(0);
       transform: scale(1.05);
@@ -76,13 +75,6 @@
       filter: blur(0) !important;
       transform: scale(1.1);
       z-index: 2;
-    }
-
-    .orb.soloing a:not(.active),
-    .orb.soloing::before,
-    .orb.soloing::after {
-      opacity: 0 !important;
-      pointer-events: none !important;
     }
 
     .notify {
@@ -124,23 +116,9 @@
     let inOuterAura = false;
     let inInnerAura = false;
     let activeLink = null;
-    let soloTimeout;
-    let tapTracker = new WeakMap();
-    let hoveredLink = null;
+    let timeoutId;
 
     const ORB_RADIUS = () => orb.getBoundingClientRect().width / 2;
-
-    function hapticPulse() {
-      if (navigator.vibrate) navigator.vibrate(15);
-    }
-
-    function pingSolis() {
-      orb.style.transition = 'transform 0.4s ease';
-      orb.style.transform = 'translate(-50%, -50%) scale(1.08)';
-      setTimeout(() => {
-        orb.style.transform = 'translate(-50%, -50%) scale(1)';
-      }, 300);
-    }
 
     function setLight(e) {
       const x = e.clientX || (e.touches && e.touches[0].clientX);
@@ -157,7 +135,7 @@
       orb.style.setProperty('--x', `${(x / window.innerWidth) * 100}%`);
       orb.style.setProperty('--y', `${(y / window.innerHeight) * 100}%`);
 
-      if (activeLink) return;
+      if (activeLink) return; // override orb if link active
 
       if (dist <= outerLimit && !inOuterAura) {
         orb.classList.add("visible");
@@ -175,8 +153,6 @@
         orb.classList.remove("reveal-links");
         inOuterAura = false;
         inInnerAura = false;
-        hoveredLink = null;
-        links.forEach(link => link.classList.remove("revealed"));
         clearTimeout(trustTimeout);
         trustTimeout = null;
       }
@@ -188,8 +164,6 @@
         } else if (dist > innerLimit && inInnerAura) {
           orb.classList.remove("reveal-links");
           inInnerAura = false;
-          hoveredLink = null;
-          links.forEach(link => link.classList.remove("revealed"));
         }
       }
     }
@@ -206,73 +180,36 @@
       if (navigator.vibrate) navigator.vibrate(15);
     }
 
-    function spotlightLink(link) {
-      orb.classList.add("soloing");
-      links.forEach(l => l.classList.remove("active"));
-      clearTimeout(soloTimeout);
-
-      link.classList.add("active");
-      activeLink = link;
-
-      soloTimeout = setTimeout(() => {
-        orb.classList.remove("soloing");
-        link.classList.remove("active");
-        activeLink = null;
-        orb.classList.add("reveal-links");
-      }, 3000);
-        // Check if we're brushing over any link
-        if (inInnerAura) {
-          let foundHover = false;
-          links.forEach(link => {
-            const box = link.getBoundingClientRect();
-            if (x > box.left && x < box.right && y > box.top && y < box.bottom) {
-              if (hoveredLink !== link) {
-                hoveredLink = link;
-                link.classList.add("revealed");
-                hapticPulse();
-              }
-              foundHover = true;
-            } else {
-              link.classList.remove("revealed");
-              if (hoveredLink === link) hoveredLink = null;
-            }
-          });
-        }
-      }
-    }
-
-    // Hover for desktop
     links.forEach(link => {
-      link.addEventListener('mouseenter', () => {
-        if (!trustGained || activeLink) return;
-        hapticPulse();
-        spotlightLink(link);
-        link.classList.add('revealed');
-      });
+      link.addEventListener('touchstart', hapticPulse);
+      link.addEventListener('mouseenter', hapticPulse);
 
       link.addEventListener('click', (e) => {
-        if (!trustGained) return;
-
-        const now = Date.now();
-        const lastTap = tapTracker.get(link) || 0;
-
-        if (now - lastTap < 700) {
-          // Confirmed second tap
-          return;
+        if (link === activeLink) {
+          return; // already clicked, let it open
         }
 
         e.preventDefault();
         e.stopPropagation();
-        tapTracker.set(link, now);
-        spotlightLink(link);
-      link.addEventListener('mouseleave', () => {
-        link.classList.remove('revealed');
-      });
 
-      link.addEventListener('touchstart', hapticPulse);
+        // deactivate previous
+        links.forEach(l => l.classList.remove("active"));
+        clearTimeout(timeoutId);
+
+        // activate this one
+        activeLink = link;
+        link.classList.add("active");
+        orb.classList.remove("reveal-links");
+
+        // fade out after 3s
+        timeoutId = setTimeout(() => {
+          link.classList.remove("active");
+          activeLink = null;
+          orb.classList.add("reveal-links");
+        }, 3000);
+      });
     });
 
-    // Listen to pointer motion
     scene.addEventListener("mousemove", setLight);
     scene.addEventListener("touchmove", setLight);
     scene.addEventListener("touchstart", setLight);
