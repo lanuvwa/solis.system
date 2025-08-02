@@ -20,8 +20,6 @@
       position: relative;
       width: 100vw;
       height: 100vh;
-      background: black;
-      overflow: hidden;
     }
 
     .orb {
@@ -30,17 +28,17 @@
       left: 50%;
       width: min(75vw, 75vh);
       height: min(75vw, 75vh);
+      transform: translate(-50%, -50%);
       border-radius: 50%;
+      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.08), rgba(255,255,255,0.015) 40%, transparent 80%);
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.4s ease;
-      transform: translate(-50%, -50%);
       z-index: 1;
-      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.08), rgba(255,255,255,0.015) 40%, transparent 80%);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
+      transition: opacity 0.4s ease;
     }
 
     .orb.visible {
@@ -52,13 +50,13 @@
       color: white;
       text-decoration: none;
       font-size: clamp(0.75rem, 1.5vw, 1rem);
-      padding: 16px 48px; /* <-- extended horizontal padding */
-      margin: 6px 0;
+      padding: 14px 56px; /* wider for thumbs */
+      margin: 2px 0;      /* tighter vertical spacing */
       opacity: 0;
       filter: blur(5px);
       pointer-events: none;
-      transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
       border-radius: 12px;
+      transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease, background 0.3s ease;
     }
 
     .orb.reveal-links a {
@@ -66,10 +64,12 @@
       pointer-events: auto;
     }
 
+    .orb.reveal-links a:hover,
     .orb.reveal-links a.revealed {
       opacity: 1;
       filter: blur(0);
       transform: scale(1.05);
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .notify {
@@ -136,7 +136,7 @@
       const dy = y - cy;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const outerLimit = ORB_RADIUS() * 1.4;
-      const innerLimit = ORB_RADIUS() * 0.4;
+      const innerLimit = ORB_RADIUS() * 0.42;
 
       orb.style.setProperty('--x', `${(x / window.innerWidth) * 100}%`);
       orb.style.setProperty('--y', `${(y / window.innerHeight) * 100}%`);
@@ -177,13 +177,11 @@
           links.forEach(link => {
             const box = link.getBoundingClientRect();
             const isInside = x > box.left && x < box.right && y > box.top && y < box.bottom;
-            if (isInside) {
-              if (hoveredLink !== link) {
-                hoveredLink = link;
-                link.classList.add("revealed");
-                hapticPulse();
-              }
-            } else {
+            if (isInside && !link.classList.contains("revealed")) {
+              link.classList.add("revealed");
+              hapticPulse();
+              hoveredLink = link;
+            } else if (!isInside && link.classList.contains("revealed")) {
               link.classList.remove("revealed");
               if (hoveredLink === link) hoveredLink = null;
             }
