@@ -47,28 +47,18 @@
       opacity: 1;
     }
 
-    .hitbox {
-      padding: 16px 40px;
-      margin: 8px 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      transition: background 0.3s ease;
-    }
-
-    .hitbox:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-
     .orb a {
+      display: block;
       color: white;
       text-decoration: none;
       font-size: clamp(0.75rem, 1.5vw, 1rem);
+      padding: 16px 48px; /* <-- extended horizontal padding */
+      margin: 6px 0;
       opacity: 0;
       filter: blur(5px);
       pointer-events: none;
       transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease;
+      border-radius: 12px;
     }
 
     .orb.reveal-links a {
@@ -103,10 +93,10 @@
   <div class="scene" id="scene">
     <div class="notify" id="notify">a door has been unlocked</div>
     <div class="orb" id="orb">
-      <div class="hitbox"><a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump" target="_blank">S0LI$ Token ↗</a></div>
-      <div class="hitbox"><a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a></div>
-      <div class="hitbox"><a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a></div>
-      <div class="hitbox"><a href="#">Manifest (soon) ↗</a></div>
+      <a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump" target="_blank">S0LI$ Token ↗</a>
+      <a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a>
+      <a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a>
+      <a href="#">Manifest (soon) ↗</a>
     </div>
   </div>
 
@@ -183,12 +173,10 @@
           links.forEach(link => link.classList.remove("revealed"));
         }
 
-        // Check hover based on expanded hitbox
         if (inInnerAura) {
           links.forEach(link => {
-            const box = link.parentElement.getBoundingClientRect(); // use .hitbox
+            const box = link.getBoundingClientRect();
             const isInside = x > box.left && x < box.right && y > box.top && y < box.bottom;
-
             if (isInside) {
               if (hoveredLink !== link) {
                 hoveredLink = link;
