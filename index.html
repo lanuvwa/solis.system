@@ -47,11 +47,24 @@
       opacity: 1;
     }
 
+    .hitbox {
+      padding: 16px 40px;
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: background 0.3s ease;
+    }
+
+    .hitbox:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
     .orb a {
       color: white;
       text-decoration: none;
       font-size: clamp(0.75rem, 1.5vw, 1rem);
-      margin: 6px 0;
       opacity: 0;
       filter: blur(5px);
       pointer-events: none;
@@ -90,10 +103,10 @@
   <div class="scene" id="scene">
     <div class="notify" id="notify">a door has been unlocked</div>
     <div class="orb" id="orb">
-      <a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump" target="_blank">S0LI$ Token ↗</a>
-      <a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a>
-      <a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a>
-      <a href="#">Manifest (soon) ↗</a>
+      <div class="hitbox"><a href="https://pump.fun/coin/4t3vmT5KwLfZ7pJwzFmqsYpTFhUTFiFKxsXURjYspump" target="_blank">S0LI$ Token ↗</a></div>
+      <div class="hitbox"><a href="https://instagram.com/s0lissystem" target="_blank">Instagram ↗</a></div>
+      <div class="hitbox"><a href="https://twitter.com/s0lissystem" target="_blank">Twitter ↗</a></div>
+      <div class="hitbox"><a href="#">Manifest (soon) ↗</a></div>
     </div>
   </div>
 
@@ -150,8 +163,7 @@
           }, 4000);
         }
       } else if (dist > outerLimit && inOuterAura) {
-        orb.classList.remove("visible");
-        orb.classList.remove("reveal-links");
+        orb.classList.remove("visible", "reveal-links");
         inOuterAura = false;
         inInnerAura = false;
         hoveredLink = null;
@@ -171,18 +183,18 @@
           links.forEach(link => link.classList.remove("revealed"));
         }
 
-        // Check if we're brushing over any link
+        // Check hover based on expanded hitbox
         if (inInnerAura) {
-          let foundHover = false;
           links.forEach(link => {
-            const box = link.getBoundingClientRect();
-            if (x > box.left && x < box.right && y > box.top && y < box.bottom) {
+            const box = link.parentElement.getBoundingClientRect(); // use .hitbox
+            const isInside = x > box.left && x < box.right && y > box.top && y < box.bottom;
+
+            if (isInside) {
               if (hoveredLink !== link) {
                 hoveredLink = link;
                 link.classList.add("revealed");
                 hapticPulse();
               }
-              foundHover = true;
             } else {
               link.classList.remove("revealed");
               if (hoveredLink === link) hoveredLink = null;
@@ -192,18 +204,6 @@
       }
     }
 
-    // Hover for desktop
-    links.forEach(link => {
-      link.addEventListener('mouseenter', () => {
-        hapticPulse();
-        link.classList.add('revealed');
-      });
-      link.addEventListener('mouseleave', () => {
-        link.classList.remove('revealed');
-      });
-    });
-
-    // Listen to pointer motion
     scene.addEventListener("mousemove", setLight);
     scene.addEventListener("touchmove", setLight);
     scene.addEventListener("touchstart", setLight);
