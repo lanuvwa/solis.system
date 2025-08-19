@@ -13,7 +13,7 @@
       overflow: hidden;
       font-family: monospace;
       touch-action: none;
-      cursor: none;
+      cursor: none; /* unchanged */
     }
 
     .scene {
@@ -30,7 +30,8 @@
       height: min(75vw, 75vh);
       transform: translate(-50%, -50%);
       border-radius: 50%;
-      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.08), rgba(255,255,255,0.015) 40%, transparent 80%);
+      background: radial-gradient(circle at var(--x, 50%) var(--y, 50%),
+        rgba(255,255,255,0.08), rgba(255,255,255,0.015) 40%, transparent 80%);
       pointer-events: none;
       opacity: 0;
       z-index: 1;
@@ -41,21 +42,20 @@
       transition: opacity 0.4s ease;
     }
 
-    .orb.visible {
-      opacity: 1;
-    }
+    .orb.visible { opacity: 1; }
 
     .orb a {
       display: block;
       color: white;
       text-decoration: none;
       font-size: clamp(0.75rem, 1.5vw, 1rem);
-      padding: 6px 56px;     /* tighter vertical, wide thumb comfort */
-      margin: 1px 0;         /* very tight stack */
+      padding: 6px 56px;   /* comfy touch target */
+      margin: 1px 0;       /* tight stack */
       opacity: 0;
       filter: blur(5px);
       pointer-events: none;
       border-radius: 12px;
+      -webkit-tap-highlight-color: transparent; /* no mobile flash */
       transition: opacity 0.4s ease, filter 0.4s ease, transform 0.3s ease, background 0.3s ease;
     }
 
@@ -64,12 +64,13 @@
       pointer-events: auto;
     }
 
+    /* CHANGED: remove grey bg while keeping the big hitbox */
     .orb.reveal-links a:hover,
     .orb.reveal-links a.revealed {
       opacity: 1;
       filter: blur(0);
       transform: scale(1.05);
-      background: rgba(255, 255, 255, 0.05);
+      background: transparent; /* was rgba(255,255,255,0.05) */
     }
 
     .notify {
@@ -83,10 +84,7 @@
       transition: opacity 0.8s ease;
       font-family: monospace;
     }
-
-    .notify.show {
-      opacity: 1;
-    }
+    .notify.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -191,9 +189,8 @@
     }
 
     scene.addEventListener("mousemove", setLight);
-    scene.addEventListener("touchmove", setLight);
-    scene.addEventListener("touchstart", setLight);
+    scene.addEventListener("touchmove", setLight, { passive: true });
+    scene.addEventListener("touchstart", setLight, { passive: true });
   </script>
 </body>
 </html>
-
